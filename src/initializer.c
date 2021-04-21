@@ -1,34 +1,67 @@
-// C program to demonstrate working of Semaphores
+#include <fcntl.h>
+#include <stdlib.h>
 #include <stdio.h>
 #include <pthread.h>
 #include <semaphore.h>
+#include <sys/wait.h>
 #include <unistd.h>
 
-sem_t mutex;
-
-void *thread(void *arg)
+const char *semName = "asdfsd";
+void parent(void)
 {
-   //wait
-   sem_wait(&mutex);
-   printf("\nEntered..\n");
+    sem_t *sem_id = sem_open(semName, O_CREAT, 0600, 0);
+    if (sem_id == SEM_FAILED)
+    {
+        perror("Parent  : [sem_open] Failed\n");
+        return;
+    }
+    printf("Parent  : Wait for Child to Print\n");
+    if (sem_wait(sem_id) < 0)
+        printf("Parent  : [sem_wait] Failed\n");
+    printf("Parent  : Child Printed! \n");
 
-   //critical section
-   sleep(4);
-
-   //signal
-   printf("\nJust Exiting...\n");
-   sem_post(&mutex);
+    if (sem_close(sem_id) != 0)
+    {
+        perror("Parent  : [sem_close] Failed\n");
+        return;
+    }
+    if (sem_unlink(semName) < 0)
+    {
+        printf("Parent  : [sem_unlink] Failed\n");
+        return;
+    }
 }
-
-int main()
+void child(void)
 {
-   sem_init(&mutex, 0, 1);
-   pthread_t t1, t2;
-   pthread_create(&t1, NULL, thread, NULL);
-   sleep(2);
-   pthread_create(&t2, NULL, thread, NULL);
-   pthread_join(t1, NULL);
-   pthread_join(t2, NULL);
-   sem_destroy(&mutex);
-   return 0;
+    sem_t *sem_id = sem_open(semName, O_CREAT, 0600, 0);
+    if (sem_id == SEM_FAILED)
+    {
+        perror("Child   : [sem_open] Failed\n");
+        return;
+    }
+    printf("Child   : I am done! Release Semaphore\n");
+    if (sem_post(sem_id) < 0)
+        printf("Child   : [sem_post] Failed \n");
+}
+int main(int argc, char *argv[])
+{
+    pid_t pid;
+    pid = fork();
+    if (pid < 0)
+    {
+        perror("fork");
+        exit(-1);
+    }
+    printf("%daa\n", pid);
+    if (!pid)
+    {
+        child();
+        printf("Child   : Done with sem_open \n");
+    }
+    else
+    {
+        parent();
+        printf("Parent  : Done with sem_open \n");
+    }
+    return 0;
 }
