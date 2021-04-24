@@ -40,6 +40,7 @@ time_t rawtime;
 
 int initializeSemaphores(char* producerSemaphoreName, char* consumerSemaphoreName, char* metadataSemaphoreName);
 void writeAutomaticMessage(int* pointer, int index, int producerActives, int consumerActives);
+void writeManualMessage(int* pointer, char* message, int index, int producerActives, int consumerActives);
 void writeStopMessage(int* pointer, int index, int producerActives, int consumerActives);
 
 int main(int argc, char* argv[]) {
@@ -53,6 +54,7 @@ int main(int argc, char* argv[]) {
     char consumerSemaphoreName[50];
     char metadataSemaphoreName[50];
     int averageTime = -1;
+    int manualMode = 0;
     pid = getpid();
 
     for (int i = 0; i < argc; i++) {
@@ -67,6 +69,9 @@ int main(int argc, char* argv[]) {
         }
         if (strcmp(argv[i], "-t") == 0) { 
             averageTime = atoi(argv[i + 1]);
+        }
+        if (strcmp(argv[i], "-m") == 0) {
+            manualMode = 1;
         }
     }
 
@@ -99,8 +104,22 @@ int main(int argc, char* argv[]) {
     int writeIndex;
     int consumerActives;
     int producerActives;
+    char message[100];
+    strcpy(message, "");
+
+    int producedMessages = 0;
+    int totalWaitingTime = 0;
+    int totalBlockedTime = 0;
+    int totalKernelTime = 0;
+    int totalUserTime = 0;
 
     while (check == 1) {
+        if (manualMode == 1) {
+            printf("Escriba su Mensaje y Presione Enter:\n");
+            fgets(message, 100, stdin);
+            message[strcspn(message, "\n")] = 0;
+        }
+
         if (sem_wait(semp) < 0) {
             printf("[sem_wait] Failed\n");
             return 1;
@@ -139,13 +158,19 @@ int main(int argc, char* argv[]) {
         if (check == 1) {
             metadata->messageAmount += 1;
             metadata->currentMessages += 1;
+            producedMessages += 1;
 
             if (sem_post(semm) < 0) {
                 printf("[sem_post] Failed\n");
                 return 1;
             }
 
-            writeAutomaticMessage(pointer + (metadataSize * (writeIndex + 1)), writeIndex, producerActives, consumerActives);
+            if (manualMode == 0) {
+                writeAutomaticMessage(pointer + (metadataSize * (writeIndex + 1)), writeIndex, producerActives, consumerActives);
+            }
+            if (manualMode == 1) {
+                writeManualMessage(pointer + (metadataSize * (writeIndex + 1)), message, writeIndex, producerActives, consumerActives);
+            }
 
             if (sem_post(semc) < 0) {
                 printf("[sem_post] Failed\n");
@@ -157,6 +182,7 @@ int main(int argc, char* argv[]) {
         }
         else if (check == 0 && metadata->consumerActives != 0) {
             metadata->currentMessages += 1;
+            producedMessages += 1;
 
             if (sem_post(semm) < 0) {
                 printf("[sem_post] Failed\n");
@@ -189,7 +215,15 @@ int main(int argc, char* argv[]) {
         }
     }
 
-    printf("Termine\n");
+    printf("------------------------------------------\n");
+    printf("ID del Productor: %d\n", pid);
+    printf("Numero de Mensajes Producidos: %d\n", producedMessages);
+    printf("Detenido por el Finalizador\n");
+    printf("Tiempo Esperando Total: %d\n", totalWaitingTime);
+    printf("Tiempo Bloqueado Total: %d\n", totalBlockedTime);
+    printf("Tiempo de Usuario Total: %d\n",totalUserTime);
+    printf("Tiempo de Kernel Total: %d\n", totalKernelTime);
+    printf("------------------------------------------\n");
 
     return 0;
 }
@@ -226,6 +260,23 @@ void writeAutomaticMessage(int* pointer, int index, int producerActives, int con
     struct tm* ptm = localtime(&rawtime);
    
     sprintf(message, "Numero Magico: %d, PID: %d, Mensaje: Hola, este es el Primer Proyecto de Principios de Sistemas Operativos, Fecha: %02d/%02d/%d, Hora: %02d:%02d:%02d", magicNumber, pid, ptm->tm_mday, ptm->tm_mon + 1, ptm->tm_year + 1900, ptm->tm_hour, ptm->tm_min, ptm->tm_sec);
+    
+    printf("------------------------------------------\n");
+    printf("Se inserto el mensaje: %s\n", message);
+    printf("En la posicion %d del buzon circular\n", index);
+    printf("Cantidad de Productores Vivos al Escribir el Mensaje: %d\n", producerActives);
+    printf("Cantidad de Consumidores Vivos al Escribir el Mensaje: %d\n", consumerActives);
+    printf("------------------------------------------\n");
+
+    return;
+}
+
+void writeManualMessage(int* pointer, char* userInputMessage, int index, int producerActives, int consumerActives) {
+    char* message = (char*) (pointer);
+    int magicNumber = (rand() % 7);
+    struct tm* ptm = localtime(&rawtime);
+   
+    sprintf(message, "Numero Magico: %d, PID: %d, Mensaje: %s, Fecha: %02d/%02d/%d, Hora: %02d:%02d:%02d", magicNumber, pid, userInputMessage, ptm->tm_mday, ptm->tm_mon + 1, ptm->tm_year + 1900, ptm->tm_hour, ptm->tm_min, ptm->tm_sec);
     
     printf("------------------------------------------\n");
     printf("Se inserto el mensaje: %s\n", message);

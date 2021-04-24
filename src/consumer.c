@@ -47,6 +47,7 @@ int main(int argc, char* argv[]) {
     char consumerSemaphoreName[50];
     char metadataSemaphoreName[50];
     int averageTime = -1;
+    int manualMode = 0;
     pid = getpid();
 
     for (int i = 0; i < argc; i++) {
@@ -61,6 +62,9 @@ int main(int argc, char* argv[]) {
         }
         if (strcmp(argv[i], "-t") == 0) { 
             averageTime = atoi(argv[i + 1]);
+        }
+        if (strcmp(argv[i], "-m") == 0) {
+            manualMode = 1;
         }
     }
 
@@ -94,8 +98,21 @@ int main(int argc, char* argv[]) {
     int consumerActives;
     int producerActives;
     int exitCause;
+    char message[100];
+    strcpy(message, "");
+
+    int consumedMessages = 0;
+    int totalWaitingTime = 0;
+    int totalBlockedTime = 0;
+    int totalKernelTime = 0;
+    int totalUserTime = 0;
 
     while (check == 1) {
+        if (manualMode == 1) {
+            printf("Presione Enter para Consumir un Mensaje:\n");
+            fgets(message, 100, stdin);
+        }
+
         if (sem_wait(semc) < 0) {
             printf("[sem_wait] Failed\n");
             return 1;
@@ -125,6 +142,7 @@ int main(int argc, char* argv[]) {
         metadata->currentMessages -= 1;
         consumerActives = metadata->consumerActives;
         producerActives = metadata->producerActives;
+        consumedMessages += 1;
 
         if (sem_post(semm) < 0) {
             printf("[sem_post] Failed\n");
@@ -163,7 +181,22 @@ int main(int argc, char* argv[]) {
         return 1;
     }
 
-    printf("Termine\n");
+    printf("------------------------------------------\n");
+    printf("ID del Consumidor: %d\n", pid);
+    printf("Numero de Mensajes Consumidos: %d\n", consumedMessages);
+
+    if (exitCause == 1) {
+        printf("Detenido por el Finalizador\n");
+    }
+    if (exitCause == 2) {
+        printf("Detenido por el Numero Magico\n");
+    }
+
+    printf("Tiempo Esperando Total: %d\n", totalWaitingTime);
+    printf("Tiempo Bloqueado Total: %d\n", totalBlockedTime);
+    printf("Tiempo de Usuario Total: %d\n",totalUserTime);
+    printf("Tiempo de Kernel Total: %d\n", totalKernelTime);
+    printf("------------------------------------------\n");
 
     return 0;
 }

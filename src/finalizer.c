@@ -100,7 +100,7 @@ int main(int argc, char* argv[]) {
             return 1;
         }
 
-        if (metadata->producerActives > 0) {
+        if (metadata->producerActives > 0 && metadata->consumerActives == 0) {
             if (sem_post(semp) < 0) {
                 printf("[sem_post] Failed\n");
                 return 1;
