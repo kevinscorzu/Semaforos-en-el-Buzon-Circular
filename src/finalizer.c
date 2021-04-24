@@ -58,7 +58,7 @@ int main(int argc, char* argv[]) {
     }
 
     if (strcmp(bufferName, "") == 0) {
-        printf("No se pudo determinar el nombre o el largo del buffer\n");
+        printf("No se pudo determinar el nombre del buffer\n");
         return 1;
     }
 
@@ -98,6 +98,13 @@ int main(int argc, char* argv[]) {
         if (sem_wait(semm) < 0) {
             printf("[sem_wait] Failed\n");
             return 1;
+        }
+
+        if (metadata->producerActives > 0) {
+            if (sem_post(semp) < 0) {
+                printf("[sem_post] Failed\n");
+                return 1;
+            }
         }
 
         if (metadata->consumerActives == 0 && metadata->producerActives == 0) {

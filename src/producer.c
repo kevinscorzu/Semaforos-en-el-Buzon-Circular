@@ -5,6 +5,9 @@
 #include <sys/mman.h>
 #include <semaphore.h>
 #include <unistd.h>
+#include <time.h>
+
+#define MessageSize 256
 
 struct Metadata {
     int producerActives;
@@ -32,19 +35,25 @@ struct Metadata {
 sem_t* semp;
 sem_t* semc;
 sem_t* semm;
+int pid;
+time_t rawtime;
 
 int initializeSemaphores(char* producerSemaphoreName, char* consumerSemaphoreName, char* metadataSemaphoreName);
-void writeMessage(int* pointer);
-void writeStopMessage(int* pointer);
+void writeAutomaticMessage(int* pointer, int index, int producerActives, int consumerActives);
+void writeStopMessage(int* pointer, int index, int producerActives, int consumerActives);
 
 int main(int argc, char* argv[]) {
     
+    srand(time(0));
+    rawtime = time(NULL);
+
     char bufferName[50];
     strcpy(bufferName, "");
     char producerSemaphoreName[50];
     char consumerSemaphoreName[50];
     char metadataSemaphoreName[50];
     int averageTime = -1;
+    pid = getpid();
 
     for (int i = 0; i < argc; i++) {
         if (strcmp(argv[i], "-n") == 0) {
@@ -61,8 +70,8 @@ int main(int argc, char* argv[]) {
         }
     }
 
-    if (strcmp(bufferName, "") == 0) {
-        printf("No se pudo determinar el nombre o el largo del buffer\n");
+    if (strcmp(bufferName, "") == 0 || averageTime == -1) {
+        printf("No se pudo determinar el nombre del buffer o el tiempo de espera promedio\n");
         return 1;
     }
 
@@ -88,6 +97,8 @@ int main(int argc, char* argv[]) {
     int firstTime = 1;
     int totalSize;
     int writeIndex;
+    int consumerActives;
+    int producerActives;
 
     while (check == 1) {
         if (sem_wait(semp) < 0) {
@@ -103,7 +114,7 @@ int main(int argc, char* argv[]) {
         if (firstTime == 1) {
             metadata->producerActives += 1;
             metadata->producerTotal += 1;
-            totalSize = metadataSize + (128 * metadata->bufferSlots);
+            totalSize = metadataSize + (MessageSize * metadata->bufferSlots);
             pointer = mmap(NULL, totalSize, PROT_READ | PROT_WRITE, MAP_SHARED, fd, 0);
             struct Metadata* metadata = (struct Metadata*) pointer;
             firstTime = 0;
@@ -122,6 +133,9 @@ int main(int argc, char* argv[]) {
             metadata->producerIndex = 0;
         }
 
+        consumerActives = metadata->consumerActives;
+        producerActives = metadata->producerActives;
+
         if (check == 1) {
             metadata->messageAmount += 1;
             metadata->currentMessages += 1;
@@ -131,10 +145,17 @@ int main(int argc, char* argv[]) {
                 return 1;
             }
 
-            writeMessage(pointer + (metadataSize * (writeIndex + 1)));
-        }
+            writeAutomaticMessage(pointer + (metadataSize * (writeIndex + 1)), writeIndex, producerActives, consumerActives);
 
-        if (check == 0 && metadata->consumerActives != 0) {
+            if (sem_post(semc) < 0) {
+                printf("[sem_post] Failed\n");
+                return 1;
+            }
+
+            // Cambiar por tiempo en segundos en distribucion exponencial
+            sleep(averageTime);
+        }
+        else if (check == 0 && metadata->consumerActives != 0) {
             metadata->currentMessages += 1;
 
             if (sem_post(semm) < 0) {
@@ -142,15 +163,30 @@ int main(int argc, char* argv[]) {
                 return 1;
             }
 
-            writeStopMessage(pointer + (metadataSize * (writeIndex + 1)));
-        }
+            writeStopMessage(pointer + (metadataSize * (writeIndex + 1)), writeIndex, producerActives, consumerActives);
 
-        if (sem_post(semc) < 0) {
-            printf("[sem_post] Failed\n");
-            return 1;
-        }
+            if (sem_post(semc) < 0) {
+                printf("[sem_post] Failed\n");
+                return 1;
+            }
 
-        sleep(averageTime);
+            // Cambiar por tiempo en segundos en distribucion exponencial
+            sleep(averageTime);
+        }
+        else {
+            if (sem_post(semm) < 0) {
+                printf("[sem_post] Failed\n");
+                return 1;
+            }
+
+            if (sem_post(semc) < 0) {
+                printf("[sem_post] Failed\n");
+                return 1;
+            }
+
+            // Cambiar por tiempo en segundos en distribucion exponencial
+            sleep(averageTime);
+        }
     }
 
     printf("Termine\n");
@@ -184,18 +220,36 @@ int initializeSemaphores(char* producerSemaphoreName, char* consumerSemaphoreNam
     return 0;
 }
 
-void writeMessage(int* pointer) {
+void writeAutomaticMessage(int* pointer, int index, int producerActives, int consumerActives) {
     char* message = (char*) (pointer);
-    strcpy(message, "AHHHHHHHHHHH");
+    int magicNumber = (rand() % 7);
+    struct tm* ptm = localtime(&rawtime);
+   
+    sprintf(message, "Numero Magico: %d, PID: %d, Mensaje: Hola, este es el Primer Proyecto de Principios de Sistemas Operativos, Fecha: %02d/%02d/%d, Hora: %02d:%02d:%02d", magicNumber, pid, ptm->tm_mday, ptm->tm_mon + 1, ptm->tm_year + 1900, ptm->tm_hour, ptm->tm_min, ptm->tm_sec);
+    
+    printf("------------------------------------------\n");
     printf("Se inserto el mensaje: %s\n", message);
+    printf("En la posicion %d del buzon circular\n", index);
+    printf("Cantidad de Productores Vivos al Escribir el Mensaje: %d\n", producerActives);
+    printf("Cantidad de Consumidores Vivos al Escribir el Mensaje: %d\n", consumerActives);
+    printf("------------------------------------------\n");
 
     return;
 }
 
-void writeStopMessage(int* pointer) {
+void writeStopMessage(int* pointer, int index, int producerActives, int consumerActives) {
     char* message = (char*) (pointer);
-    strcpy(message, "STOP");
+    int magicNumber = -1;
+    struct tm* ptm = localtime(&rawtime);
+  
+    sprintf(message, "Numero Magico: %d, PID: %d, Mensaje: Finalizar, Fecha: %02d/%02d/%d, Hora: %02d:%02d:%02d", magicNumber, pid, ptm->tm_mday, ptm->tm_mon + 1, ptm->tm_year + 1900, ptm->tm_hour, ptm->tm_min, ptm->tm_sec);
+
+    printf("------------------------------------------\n");
     printf("Se inserto el mensaje: %s\n", message);
+    printf("En la posicion %d del buzon circular\n", index);
+    printf("Cantidad de Productores Vivos al Escribir el Mensaje: %d\n", producerActives);
+    printf("Cantidad de Consumidores Vivos al Escribir el Mensaje: %d\n", consumerActives);
+    printf("------------------------------------------\n");
 
     return;
 }

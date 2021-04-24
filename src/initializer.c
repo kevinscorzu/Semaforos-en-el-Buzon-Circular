@@ -6,6 +6,8 @@
 #include <semaphore.h>
 #include <unistd.h>
 
+#define MessageSize 256
+
 struct Metadata {
     int producerActives;
     int producerTotal;
@@ -71,7 +73,7 @@ int main(int argc, char* argv[]) {
     }
 
     int metadataSize = sizeof(struct Metadata);
-    int bufferSize = 128 * bufferSlots;
+    int bufferSize = MessageSize * bufferSlots;
     int totalSize = metadataSize + bufferSize;
 
     ftruncate(fd, totalSize);

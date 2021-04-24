@@ -6,6 +6,8 @@
 #include <semaphore.h>
 #include <unistd.h>
 
+#define MessageSize 256
+
 struct Metadata {
     int producerActives;
     int producerTotal;
@@ -32,9 +34,10 @@ struct Metadata {
 sem_t* semp;
 sem_t* semc;
 sem_t* semm;
+int pid;
 
 int initializeSemaphores(char* producerSemaphoreName, char* consumerSemaphoreName, char* metadataSemaphoreName);
-int readMessage(int* pointer);
+int readAutomaticMessage(int* pointer, int index, int producerActives, int consumerActives);
 
 int main(int argc, char* argv[]) {
     
@@ -44,6 +47,7 @@ int main(int argc, char* argv[]) {
     char consumerSemaphoreName[50];
     char metadataSemaphoreName[50];
     int averageTime = -1;
+    pid = getpid();
 
     for (int i = 0; i < argc; i++) {
         if (strcmp(argv[i], "-n") == 0) {
@@ -60,8 +64,8 @@ int main(int argc, char* argv[]) {
         }
     }
 
-    if (strcmp(bufferName, "") == 0) {
-        printf("No se pudo determinar el nombre o el largo del buffer\n");
+    if (strcmp(bufferName, "") == 0 || averageTime == -1) {
+        printf("No se pudo determinar el nombre del buffer o el tiempo de espera promedio\n");
         return 1;
     }
 
@@ -87,6 +91,9 @@ int main(int argc, char* argv[]) {
     int firstTime = 1;
     int totalSize;
     int readIndex;
+    int consumerActives;
+    int producerActives;
+    int exitCause;
 
     while (check == 1) {
         if (sem_wait(semc) < 0) {
@@ -102,7 +109,7 @@ int main(int argc, char* argv[]) {
         if (firstTime == 1) {
             metadata->consumerActives += 1;
             metadata->consumerTotal += 1;
-            totalSize = metadataSize + (128 * metadata->bufferSlots);
+            totalSize = metadataSize + (MessageSize * metadata->bufferSlots);
             pointer = mmap(NULL, totalSize, PROT_READ | PROT_WRITE, MAP_SHARED, fd, 0);
             struct Metadata* metadata = (struct Metadata*) pointer;
             firstTime = 0;
@@ -116,15 +123,18 @@ int main(int argc, char* argv[]) {
         }
 
         metadata->currentMessages -= 1;
+        consumerActives = metadata->consumerActives;
+        producerActives = metadata->producerActives;
 
         if (sem_post(semm) < 0) {
             printf("[sem_post] Failed\n");
             return 1;
         }
 
-        if (readMessage(pointer + (metadataSize * (readIndex + 1))) > 0) {
+        exitCause = readAutomaticMessage(pointer + (metadataSize * (readIndex + 1)), readIndex, producerActives, consumerActives);
+
+        if (exitCause > 0) {
             check = 0;
-            break;
         }
 
         if (sem_post(semp) < 0) {
@@ -132,6 +142,7 @@ int main(int argc, char* argv[]) {
             return 1;
         }
 
+        // Cambiar por tiempo en segundos en distribucion de poisson
         sleep(averageTime);
     }
 
@@ -141,6 +152,10 @@ int main(int argc, char* argv[]) {
     }
 
     metadata->consumerActives -= 1;
+
+    if (exitCause == 2) {
+        metadata->consumerTotalDeletedByKey += 1;
+    }
     //Agregar tiempos
 
     if (sem_post(semm) < 0) {
@@ -179,17 +194,28 @@ int initializeSemaphores(char* producerSemaphoreName, char* consumerSemaphoreNam
     return 0;
 }
 
-int readMessage(int* pointer) {
+int readAutomaticMessage(int* pointer, int index, int producerActives, int consumerActives) {
 
     char* message = (char*) (pointer);
-    printf("Se leyo el mensaje: %s\n", message);
 
-    if (strcmp(message, "STOP") == 0) {
-        strcpy(message, "");
+    printf("------------------------------------------\n");
+    printf("Se leyo el mensaje: %s\n", message);
+    printf("En la posicion %d del buzon circular\n", index);
+    printf("Cantidad de Productores Vivos al Leer el Mensaje: %d\n", producerActives);
+    printf("Cantidad de Consumidores Vivos al Leer el Mensaje: %d\n", consumerActives);
+    printf("------------------------------------------\n");
+
+    int magicNumber = atoi(&message[15]);
+
+    strcpy(message, "");
+
+    if (magicNumber == -1) {
         return 1;
     }
-    else {
-        strcpy(message, "");
-        return 0;
+
+    if (pid % 6 == magicNumber) {
+        return 2;
     }
+
+    return 0;
 }
