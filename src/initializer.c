@@ -3,6 +3,7 @@
 #include <fcntl.h>
 #include <string.h>
 #include <sys/mman.h>
+#include <semaphore.h>
 #include <unistd.h>
 
 struct Metadata {
@@ -23,61 +24,78 @@ struct Metadata {
     int totalUserTime;
     int totalKernelTime;
 
-    int bufferSize;
+    int bufferSlots;
     
     int stop;
 };
 
-void initializeMedata(struct Metadata* metadata);
+void initializeMetadata(struct Metadata* metadata);
+int createSemaphores(char* producerSemaphoreName, char* consumerSemaphoreName, char* metadataSemaphoreName, int bufferSlots);
 
 int main(int argc, char* argv[]) {
 
-    char* bufferName = "";
-    int bufferSize = -1;
+    char bufferName[50];
+    strcpy(bufferName, "");
+    char producerSemaphoreName[50];
+    char consumerSemaphoreName[50];
+    char metadataSemaphoreName[50];
+    int bufferSlots = -1;
 
     for (int i = 0; i < argc; i++) {
         if (strcmp(argv[i], "-n") == 0) {
-            bufferName = argv[i + 1];
+            strcpy(bufferName, argv[i + 1]);
+            strcpy(producerSemaphoreName, bufferName);
+            strcat(producerSemaphoreName, "p");
+            strcpy(consumerSemaphoreName, bufferName);
+            strcat(consumerSemaphoreName, "c");
+            strcpy(metadataSemaphoreName, bufferName);
+            strcat(metadataSemaphoreName, "m");
         }
         if (strcmp(argv[i], "-l") == 0) { 
-            bufferSize = atoi(argv[i + 1]);
+            bufferSlots = atoi(argv[i + 1]);
         }
     }
 
-    if (bufferSize == -1 || strcmp(bufferName, "") == 0) {
+    if (bufferSlots == -1 || strcmp(bufferName, "") == 0) {
         printf("No se pudo determinar el nombre o el largo del buffer\n");
         return 1;
     }
 
-    printf("Nombre del buffer: %s, Largo de este: %d\n", bufferName, bufferSize);
+    printf("Nombre del buffer: %s, Largo de este: %d\n", bufferName, bufferSlots);
 
     int fd = shm_open(bufferName, O_CREAT | O_EXCL | O_RDWR, 0600);
     if (fd < 0) {
+        shm_unlink(bufferName); 
         perror("sh,_open()");
         return 1;
     }
 
     int metadataSize = sizeof(struct Metadata);
-    int bufferBytesSize = 128 * bufferSize;
-    int totalSize = metadataSize + bufferBytesSize;
+    int bufferSize = 128 * bufferSlots;
+    int totalSize = metadataSize + bufferSize;
 
     ftruncate(fd, totalSize);
 
     int* pointer = mmap(NULL, totalSize, PROT_READ | PROT_WRITE, MAP_SHARED, fd, 0);
 
     struct Metadata* metadata = (struct Metadata*) pointer;
-    initializeMedata(metadata);
-    metadata->bufferSize = bufferSize;
+    initializeMetadata(metadata);
+    metadata->bufferSlots = bufferSlots;
 
-    char* test = (char*) (pointer + metadataSize);
-    strcpy(test, "AHHHHHHHHHHH");
+    if (createSemaphores(producerSemaphoreName, consumerSemaphoreName, metadataSemaphoreName, bufferSlots) > 0) {
+        printf("No se pudo abrir los semaforos\n");
+        close(fd);
+        shm_unlink(bufferName); 
+        return 1;
+    }
 
-    printf("%s\n", test);
+    printf("Buffer y semaforos creados exitosamente\n");
 
     return 0;
 }
 
-void initializeMedata(struct Metadata* metadata) {
+void initializeMetadata(struct Metadata* metadata) {
+
     metadata->producerActives = 0;
     metadata->producerTotal = 0;
     metadata->producerIndex = 0;
@@ -96,4 +114,46 @@ void initializeMedata(struct Metadata* metadata) {
     metadata->totalKernelTime = 0;
 
     metadata->stop = 0;
+
+    return;
+}
+
+int createSemaphores(char* producerSemaphoreName, char* consumerSemaphoreName, char* metadataSemaphoreName, int bufferSlots) {
+
+    sem_t* semp = sem_open(producerSemaphoreName, O_CREAT, 0644, bufferSlots);
+
+    if (semp == SEM_FAILED)
+    {
+        perror("[sem_open] Failed\n");
+        return 1;
+    }
+
+    //sem_init(semp, 1, bufferSlots);
+
+    sem_t* semc = sem_open(consumerSemaphoreName, O_CREAT, 0644, 0);
+
+    if (semc == SEM_FAILED)
+    {
+        perror("[sem_open] Failed\n");
+        return 1;
+    }
+
+    //sem_init(semc, 1, 0);
+
+
+    sem_t* semm = sem_open(metadataSemaphoreName, O_CREAT, 0644, 1);
+
+    if (semm == SEM_FAILED)
+    {
+        perror("[sem_open] Failed\n");
+        return 1;
+    }
+
+    //sem_init(semm, 1, 1);
+
+    //printf("%s\n", producerSemaphoreName);
+    //printf("%s\n", consumerSemaphoreName);
+    //printf("%s\n", metadataSemaphoreName);
+
+    return 0;
 }

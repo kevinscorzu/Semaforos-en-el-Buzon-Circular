@@ -1,4 +1,4 @@
-all: initializer finalizer clean
+all: initializer finalizer producer consumer clean
 
 initializer: src/initializer.o
 	gcc src/initializer.o -lpthread -lrt -o out/initializer
@@ -11,6 +11,18 @@ finalizer: src/finalizer.o
 
 finalizer.o: src/finalizer.c
 	gcc -c src/finalizer.c
+
+producer: src/producer.o
+	gcc src/producer.o -lpthread -lrt -o out/producer
+
+producer.o: src/producer.c
+	gcc -c src/producer.c
+
+consumer: src/consumer.o
+	gcc src/consumer.o -lpthread -lrt -o out/consumer
+
+consumer.o: src/consumer.c
+	gcc -c src/consumer.c
 
 clean:
 	rm src/*.o

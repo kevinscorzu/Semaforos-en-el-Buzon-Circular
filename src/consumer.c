@@ -25,7 +25,7 @@ struct Metadata {
     int totalKernelTime;
 
     int bufferSlots;
-
+    
     int stop;
 };
 
@@ -34,16 +34,16 @@ sem_t* semc;
 sem_t* semm;
 
 int initializeSemaphores(char* producerSemaphoreName, char* consumerSemaphoreName, char* metadataSemaphoreName);
-int closeSemaphores(char* producerSemaphoreName, char* consumerSemaphoreName, char* metadataSemaphoreName);
-void printData(struct Metadata* metadata);
+int readMessage(int* pointer);
 
 int main(int argc, char* argv[]) {
-
+    
     char bufferName[50];
     strcpy(bufferName, "");
     char producerSemaphoreName[50];
     char consumerSemaphoreName[50];
     char metadataSemaphoreName[50];
+    int averageTime = -1;
 
     for (int i = 0; i < argc; i++) {
         if (strcmp(argv[i], "-n") == 0) {
@@ -54,6 +54,9 @@ int main(int argc, char* argv[]) {
             strcat(consumerSemaphoreName, "c");
             strcpy(metadataSemaphoreName, bufferName);
             strcat(metadataSemaphoreName, "m");
+        }
+        if (strcmp(argv[i], "-t") == 0) { 
+            averageTime = atoi(argv[i + 1]);
         }
     }
 
@@ -80,47 +83,72 @@ int main(int argc, char* argv[]) {
         return 1;
     }
 
+    int check = 1;
+    int firstTime = 1;
+    int totalSize;
+    int readIndex;
+
+    while (check == 1) {
+        if (sem_wait(semc) < 0) {
+            printf("[sem_wait] Failed\n");
+            return 1;
+        }
+
+        if (sem_wait(semm) < 0) {
+            printf("[sem_wait] Failed\n");
+            return 1;
+        }
+
+        if (firstTime == 1) {
+            metadata->consumerActives += 1;
+            metadata->consumerTotal += 1;
+            totalSize = metadataSize + (128 * metadata->bufferSlots);
+            pointer = mmap(NULL, totalSize, PROT_READ | PROT_WRITE, MAP_SHARED, fd, 0);
+            struct Metadata* metadata = (struct Metadata*) pointer;
+            firstTime = 0;
+        }
+
+        readIndex = metadata->consumerIndex;
+        metadata->consumerIndex += 1;
+
+        if (metadata->consumerIndex == metadata->bufferSlots){
+            metadata->consumerIndex = 0;
+        }
+
+        metadata->currentMessages -= 1;
+
+        if (sem_post(semm) < 0) {
+            printf("[sem_post] Failed\n");
+            return 1;
+        }
+
+        if (readMessage(pointer + (metadataSize * (readIndex + 1))) > 0) {
+            check = 0;
+            break;
+        }
+
+        if (sem_post(semp) < 0) {
+            printf("[sem_post] Failed\n");
+            return 1;
+        }
+
+        sleep(averageTime);
+    }
+
     if (sem_wait(semm) < 0) {
         printf("[sem_wait] Failed\n");
         return 1;
     }
 
-    metadata->stop = 1;
+    metadata->consumerActives -= 1;
+    //Agregar tiempos
 
     if (sem_post(semm) < 0) {
         printf("[sem_post] Failed\n");
         return 1;
     }
 
-    int check = 1;
-
-    while (check == 1) {
-        if (sem_wait(semm) < 0) {
-            printf("[sem_wait] Failed\n");
-            return 1;
-        }
-
-        if (metadata->consumerActives == 0 && metadata->producerActives == 0) {
-            check = 0;
-        }
-
-        if (sem_post(semm) < 0) {
-            printf("[sem_post] Failed\n");
-            return 1;
-        }
-    }
-
-    printData(metadata);
-
-    if (closeSemaphores(producerSemaphoreName, consumerSemaphoreName, metadataSemaphoreName) > 0) {
-        printf("No se pudo cerrar los semaforos");
-        return 1;
-    }
-
-    close(fd);
-    shm_unlink(bufferName);   
-
-    printf("Terminado\n");
+    printf("Termine\n");
 
     return 0;
 }
@@ -151,52 +179,17 @@ int initializeSemaphores(char* producerSemaphoreName, char* consumerSemaphoreNam
     return 0;
 }
 
-int closeSemaphores(char* producerSemaphoreName, char* consumerSemaphoreName, char* metadataSemaphoreName) {
+int readMessage(int* pointer) {
 
-    if (sem_close(semp) != 0) {
-        perror("[sem_close] Failed\n");
+    char* message = (char*) (pointer);
+    printf("Se leyo el mensaje: %s\n", message);
+
+    if (strcmp(message, "STOP") == 0) {
+        strcpy(message, "");
         return 1;
     }
-
-    if (sem_unlink(producerSemaphoreName) < 0) {
-        printf("[sem_unlink] Failed\n");
-        return 1;
+    else {
+        strcpy(message, "");
+        return 0;
     }
-
-    if (sem_close(semc) != 0) {
-        perror("[sem_close] Failed\n");
-        return 1;
-    }
-
-    if (sem_unlink(consumerSemaphoreName) < 0) {
-        printf("[sem_unlink] Failed\n");
-        return 1;
-    }
-
-    if (sem_close(semm) != 0) {
-        perror("[sem_close] Failed\n");
-        return 1;
-    }
-
-    if (sem_unlink(metadataSemaphoreName) < 0) {
-        printf("[sem_unlink] Failed\n");
-        return 1;
-    }
-
-    return 0;
-}
-
-void printData(struct Metadata* metadata) {
-
-    printf("Mensajes Totales: %d\n", metadata->messageAmount);
-    printf("Mensajes en el Buffer: %d\n", metadata->currentMessages);
-    printf("Total de Productores: %d\n", metadata->producerTotal);
-    printf("Total de Consumidores: %d\n", metadata->consumerTotal);
-    printf("Total de Consumidores Borrados por Llave: %d\n", metadata->consumerTotalDeletedByKey);
-    printf("Tiempo Esperando Total: %d\n", metadata->totalWaitingTime);
-    printf("Tiempo Bloqueado Total: %d\n", metadata->totalBlockedTime);
-    printf("Tiempo de Usuario Total: %d\n", metadata->totalUserTime);
-    printf("Tiempo de Kernel Total: %d\n", metadata->totalKernelTime);
-
-    return;
 }
