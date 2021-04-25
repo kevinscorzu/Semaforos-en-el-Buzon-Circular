@@ -86,6 +86,12 @@ int main(int argc, char *argv[])
         printf("No se pudo determinar el nombre del buffer o el tiempo de espera promedio\n");
         return 1;
     }
+    else
+    {
+        printf("[T1] %d\n", averageTime);
+        averageTime = rand_poisson(averageTime); //Calcular un número random exponencial utilizando el lambda (media)
+        printf("[T2] %d\n", averageTime);
+    }
 
     printf("Nombre del buffer: %s\n", bufferName);
 

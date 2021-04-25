@@ -3,7 +3,7 @@
 int main(void)
 {
     int i;
-    double lambda = 3.0;
+    double lambda = 2;
     int iter = 15;
     srand((unsigned)time(NULL));
 

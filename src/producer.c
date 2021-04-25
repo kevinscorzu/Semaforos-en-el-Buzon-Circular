@@ -43,7 +43,7 @@ time_t rawtime;
 int initializeSemaphores(char *producerSemaphoreName, char *consumerSemaphoreName, char *metadataSemaphoreName);
 void writeAutomaticMessage(int *pointer, int index, int producerActives, int consumerActives, char *color);
 void writeManualMessage(int *pointer, char *message, int index, int producerActives, int consumerActives, char *color);
-void writeStopMessage(int *pointer, int index, int producerActives, int consumerActives);
+void writeStopMessage(int *pointer, int index, int producerActives, int consumerActives, char *color);
 
 int main(int argc, char *argv[])
 {
@@ -92,6 +92,12 @@ int main(int argc, char *argv[])
     {
         printf("No se pudo determinar el nombre del buffer o el tiempo de espera promedio\n");
         return 1;
+    }
+    else
+    {
+        printf("[T1] %d\n", averageTime);
+        averageTime = rand_expo(averageTime); //Calcular un número random exponencial utilizando el lambda (media)
+        printf("[T2] %d\n", averageTime);
     }
 
     printf("Nombre del buffer: %s\n", bufferName);
@@ -197,7 +203,7 @@ int main(int argc, char *argv[])
 
             if (stop == 1 && consumerActives != 0)
             {
-                writeStopMessage(pointer + metadataSize + (MessageSize * writeIndex), writeIndex, producerActives, consumerActives);
+                writeStopMessage(pointer + metadataSize + (MessageSize * writeIndex), writeIndex, producerActives, consumerActives, color);
                 if (sem_post(semc) < 0)
                 {
                     printf("[sem_post] Failed\n");
@@ -345,7 +351,7 @@ void writeManualMessage(int *pointer, char *userInputMessage, int index, int pro
     return;
 }
 
-void writeStopMessage(int *pointer, int index, int producerActives, int consumerActives)
+void writeStopMessage(int *pointer, int index, int producerActives, int consumerActives, char *color)
 {
     char *message = (char *)(pointer);
     int magicNumber = -1;
@@ -353,12 +359,17 @@ void writeStopMessage(int *pointer, int index, int producerActives, int consumer
 
     sprintf(message, "Numero Magico: %d, PID: %d, Mensaje: Finalizar, Fecha: %02d/%02d/%d, Hora: %02d:%02d:%02d", magicNumber, pid, ptm->tm_mday, ptm->tm_mon + 1, ptm->tm_year + 1900, ptm->tm_hour, ptm->tm_min, ptm->tm_sec);
 
-    printf("------------------------------------------\n");
-    printf("Se inserto el mensaje: %s\n", message);
+    setColor("green");
+    printf("====================INSERTADO====================\n");
+    printf("Se inserto el mensaje:\n");
+    setColor(color);
+    printf("%s\n", message);
+    setColor("green");
     printf("En la posicion %d del buzon circular\n", index);
     printf("Cantidad de Productores Vivos al Escribir el Mensaje: %d\n", producerActives);
     printf("Cantidad de Consumidores Vivos al Escribir el Mensaje: %d\n", consumerActives);
-    printf("------------------------------------------\n");
+    printf("=================================================\n\n");
+    setColor("");
 
     return;
 }

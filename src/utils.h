@@ -35,7 +35,7 @@ double rand_poisson(double lambda)
         u = rand() / (RAND_MAX + 1.0);
         p *= u;
     }
-    return k - 1;
+    return k - 1 + 1;
 }
 
 void setColor(char *color)
