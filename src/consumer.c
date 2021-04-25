@@ -149,7 +149,7 @@ int main(int argc, char* argv[]) {
             return 1;
         }
 
-        exitCause = readAutomaticMessage(pointer + metadataSize + (MessageSize * (readIndex + 1)), readIndex, producerActives, consumerActives);
+        exitCause = readAutomaticMessage(pointer + metadataSize + (MessageSize * readIndex), readIndex, producerActives, consumerActives);
 
         if (exitCause > 0) {
             check = 0;

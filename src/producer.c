@@ -166,10 +166,10 @@ int main(int argc, char* argv[]) {
             }
 
             if (manualMode == 0) {
-                writeAutomaticMessage(pointer + metadataSize + (MessageSize * (writeIndex + 1)), writeIndex, producerActives, consumerActives);
+                writeAutomaticMessage(pointer + metadataSize + (MessageSize * writeIndex), writeIndex, producerActives, consumerActives);
             }
             if (manualMode == 1) {
-                writeManualMessage(pointer + metadataSize + (MessageSize * (writeIndex + 1)), message, writeIndex, producerActives, consumerActives);
+                writeManualMessage(pointer + metadataSize + (MessageSize * writeIndex), message, writeIndex, producerActives, consumerActives);
             }
 
             if (sem_post(semc) < 0) {
@@ -189,7 +189,7 @@ int main(int argc, char* argv[]) {
                 return 1;
             }
 
-            writeStopMessage(pointer + metadataSize + (MessageSize * (writeIndex + 1)), writeIndex, producerActives, consumerActives);
+            writeStopMessage(pointer + metadataSize + (MessageSize * writeIndex), writeIndex, producerActives, consumerActives);
 
             if (sem_post(semc) < 0) {
                 printf("[sem_post] Failed\n");
