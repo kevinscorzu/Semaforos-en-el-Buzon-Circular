@@ -13,13 +13,13 @@ finalizer.o: src/finalizer.c
 	gcc -c src/finalizer.c
 
 producer: src/producer.o
-	gcc src/producer.o -lpthread -lrt -o out/producer
+	gcc src/producer.o -lpthread -lrt -lm -o out/producer
 
 producer.o: src/producer.c
 	gcc -c src/producer.c
 
 consumer: src/consumer.o
-	gcc src/consumer.o -lpthread -lrt -o out/consumer
+	gcc src/consumer.o -lpthread -lrt -lm -o out/consumer
 
 consumer.o: src/consumer.c
 	gcc -c src/consumer.c

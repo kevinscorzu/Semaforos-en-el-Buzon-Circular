@@ -13,6 +13,7 @@
 #define Purple "\033[0;35m"
 #define Cyan "\033[0;36m"
 #define White "\033[0;37m"
+#define Reset "\033[0m"
 
 double rand_expo(double lambda)
 {
@@ -37,7 +38,7 @@ double rand_poisson(double lambda)
     return k - 1;
 }
 
-void color(char *color)
+void setColor(char *color)
 {
     if (strcmp(color, "red") == 0)
         printf(Red);
@@ -51,4 +52,8 @@ void color(char *color)
         printf(Purple);
     else if (strcmp(color, "cyan") == 0)
         printf(Cyan);
+    else if (strcmp(color, "white") == 0)
+        printf(White);
+    else
+        printf(Reset);
 }

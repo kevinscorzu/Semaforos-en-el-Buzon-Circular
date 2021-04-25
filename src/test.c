@@ -1,8 +1,3 @@
-#include <stdio.h>
-#include <stdlib.h>
-#include <math.h>
-#include <time.h>
-#include <limits.h>
 #include "utils.h"
 
 int main(void)
@@ -17,8 +12,9 @@ int main(void)
     for (i = 0; i < iter; i++)
         printf("%f\n", rand_expo(lambda));
 
-    color("cyan");
+    setColor("red");
     printf("=================POISSON=================\n");
+    setColor("white");
     printf("lambda=%f\n", lambda);
     for (i = 0; i < iter; i++)
         printf("%f\n", rand_poisson(lambda));
