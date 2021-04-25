@@ -127,8 +127,6 @@ int main(int argc, char* argv[]) {
     close(fd);
     shm_unlink(bufferName);   
 
-    printf("Terminado\n");
-
     return 0;
 }
 

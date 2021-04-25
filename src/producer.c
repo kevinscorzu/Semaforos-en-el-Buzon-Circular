@@ -112,6 +112,7 @@ int main(int argc, char* argv[]) {
     int totalBlockedTime = 0;
     int totalKernelTime = 0;
     int totalUserTime = 0;
+    int stop;
 
     while (check == 1) {
         if (manualMode == 1) {
@@ -139,7 +140,7 @@ int main(int argc, char* argv[]) {
             firstTime = 0;
         }
 
-        if (metadata->stop == 1) {
+        if (metadata->stop == 1 && metadata->consumerActives == 0) {
             metadata->producerActives -= 1;
             //Agregar tiempos
             check = 0;
@@ -159,53 +160,46 @@ int main(int argc, char* argv[]) {
             metadata->messageAmount += 1;
             metadata->currentMessages += 1;
             producedMessages += 1;
+            stop = metadata->stop;
 
             if (sem_post(semm) < 0) {
                 printf("[sem_post] Failed\n");
                 return 1;
             }
 
-            if (manualMode == 0) {
+            if (stop == 1 && consumerActives != 0) {
+                writeStopMessage(pointer + metadataSize + (MessageSize * writeIndex), writeIndex, producerActives, consumerActives);
+                if (sem_post(semc) < 0) {
+                    printf("[sem_post] Failed\n");
+                    return 1;
+                }
+
+                // Cambiar por tiempo en segundos en distribucion exponencial
+                sleep(averageTime);
+            }
+            else if (manualMode == 0) {
                 writeAutomaticMessage(pointer + metadataSize + (MessageSize * writeIndex), writeIndex, producerActives, consumerActives);
+                if (sem_post(semc) < 0) {
+                    printf("[sem_post] Failed\n");
+                    return 1;
+                }
+
+                // Cambiar por tiempo en segundos en distribucion exponencial
+                sleep(averageTime);
             }
-            if (manualMode == 1) {
+            else {
                 writeManualMessage(pointer + metadataSize + (MessageSize * writeIndex), message, writeIndex, producerActives, consumerActives);
+                if (sem_post(semc) < 0) {
+                    printf("[sem_post] Failed\n");
+                    return 1;
+                }
+
+                // Cambiar por tiempo en segundos en distribucion exponencial
+                sleep(averageTime);
             }
-
-            if (sem_post(semc) < 0) {
-                printf("[sem_post] Failed\n");
-                return 1;
-            }
-
-            // Cambiar por tiempo en segundos en distribucion exponencial
-            sleep(averageTime);
-        }
-        else if (check == 0 && metadata->consumerActives != 0) {
-            metadata->currentMessages += 1;
-            producedMessages += 1;
-
-            if (sem_post(semm) < 0) {
-                printf("[sem_post] Failed\n");
-                return 1;
-            }
-
-            writeStopMessage(pointer + metadataSize + (MessageSize * writeIndex), writeIndex, producerActives, consumerActives);
-
-            if (sem_post(semc) < 0) {
-                printf("[sem_post] Failed\n");
-                return 1;
-            }
-
-            // Cambiar por tiempo en segundos en distribucion exponencial
-            sleep(averageTime);
         }
         else {
             if (sem_post(semm) < 0) {
-                printf("[sem_post] Failed\n");
-                return 1;
-            }
-
-            if (sem_post(semc) < 0) {
                 printf("[sem_post] Failed\n");
                 return 1;
             }
@@ -218,7 +212,7 @@ int main(int argc, char* argv[]) {
     printf("------------------------------------------\n");
     printf("ID del Productor: %d\n", pid);
     printf("Numero de Mensajes Producidos: %d\n", producedMessages);
-    printf("Detenido por el Finalizador\n");
+    printf("Detenido por el Finalizador/Usuario\n");
     printf("Tiempo Esperando Total: %d\n", totalWaitingTime);
     printf("Tiempo Bloqueado Total: %d\n", totalBlockedTime);
     printf("Tiempo de Usuario Total: %d\n",totalUserTime);
@@ -273,10 +267,10 @@ void writeAutomaticMessage(int* pointer, int index, int producerActives, int con
 
 void writeManualMessage(int* pointer, char* userInputMessage, int index, int producerActives, int consumerActives) {
     char* message = (char*) (pointer);
-    int magicNumber = (rand() % 7);
+    int magicNumber = -1;
 
-    if (strcmp(userInputMessage, "Finalizar") == 0) {
-        magicNumber = -2;
+    if (strcmp(userInputMessage, "Finalizar") != 0) {
+        magicNumber = (rand() % 7);
     }
     
     struct tm* ptm = localtime(&rawtime);
