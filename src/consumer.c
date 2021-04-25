@@ -86,12 +86,6 @@ int main(int argc, char *argv[])
         printf("No se pudo determinar el nombre del buffer o el tiempo de espera promedio\n");
         return 1;
     }
-    else
-    {
-        printf("[T1] %d\n", averageTime);
-        averageTime = rand_poisson(averageTime); //Calcular un número random exponencial utilizando el lambda (media)
-        printf("[T2] %d\n", averageTime);
-    }
 
     printf("Nombre del buffer: %s\n", bufferName);
 
@@ -128,6 +122,7 @@ int main(int argc, char *argv[])
     int totalBlockedTime = 0;
     int totalKernelTime = 0;
     int totalUserTime = 0;
+    int waitingTime;
 
     while (check == 1)
     {
@@ -191,8 +186,8 @@ int main(int argc, char *argv[])
             return 1;
         }
 
-        // Cambiar por tiempo en segundos en distribucion de poisson
-        sleep(averageTime);
+        waitingTime = rand_poisson(averageTime);
+        sleep(waitingTime);
     }
 
     if (sem_wait(semm) < 0)

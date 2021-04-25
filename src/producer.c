@@ -93,12 +93,6 @@ int main(int argc, char *argv[])
         printf("No se pudo determinar el nombre del buffer o el tiempo de espera promedio\n");
         return 1;
     }
-    else
-    {
-        printf("[T1] %d\n", averageTime);
-        averageTime = rand_expo(averageTime); //Calcular un número random exponencial utilizando el lambda (media)
-        printf("[T2] %d\n", averageTime);
-    }
 
     printf("Nombre del buffer: %s\n", bufferName);
 
@@ -135,6 +129,7 @@ int main(int argc, char *argv[])
     int totalKernelTime = 0;
     int totalUserTime = 0;
     int stop;
+    int waitingTime;
 
     while (check == 1)
     {
@@ -210,8 +205,8 @@ int main(int argc, char *argv[])
                     return 1;
                 }
 
-                // Cambiar por tiempo en segundos en distribucion exponencial
-                sleep(averageTime);
+                waitingTime = rand_expo(averageTime);
+                sleep(waitingTime);
             }
             else if (manualMode == 0)
             {
@@ -222,8 +217,8 @@ int main(int argc, char *argv[])
                     return 1;
                 }
 
-                // Cambiar por tiempo en segundos en distribucion exponencial
-                sleep(averageTime);
+                waitingTime = rand_expo(averageTime);
+                sleep(waitingTime);
             }
             else
             {
@@ -234,8 +229,8 @@ int main(int argc, char *argv[])
                     return 1;
                 }
 
-                // Cambiar por tiempo en segundos en distribucion exponencial
-                sleep(averageTime);
+                waitingTime = rand_expo(averageTime);
+                sleep(waitingTime);
             }
         }
         else
@@ -246,8 +241,8 @@ int main(int argc, char *argv[])
                 return 1;
             }
 
-            // Cambiar por tiempo en segundos en distribucion exponencial
-            sleep(averageTime);
+            waitingTime = rand_expo(averageTime);
+            sleep(waitingTime);
         }
     }
 
