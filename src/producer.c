@@ -56,6 +56,8 @@ int main(int argc, char* argv[]) {
     int averageTime = -1;
     int manualMode = 0;
     pid = getpid();
+    char color[50];
+    strcpy(color, "white");
 
     for (int i = 0; i < argc; i++) {
         if (strcmp(argv[i], "-n") == 0) {
@@ -72,6 +74,9 @@ int main(int argc, char* argv[]) {
         }
         if (strcmp(argv[i], "-m") == 0) {
             manualMode = 1;
+        }
+        if (strcmp(argv[i], "-c") == 0) {
+            strcpy(color, argv[i + 1]);
         }
     }
 
@@ -142,7 +147,10 @@ int main(int argc, char* argv[]) {
 
         if (metadata->stop == 1 && metadata->consumerActives == 0) {
             metadata->producerActives -= 1;
-            //Agregar tiempos
+            metadata->totalUserTime += totalUserTime;
+            metadata->totalKernelTime += totalKernelTime;
+            metadata->totalWaitingTime += totalWaitingTime;
+            metadata->totalBlockedTime += totalBlockedTime;
             check = 0;
         }
 

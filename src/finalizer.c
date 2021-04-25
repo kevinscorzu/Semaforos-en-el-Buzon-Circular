@@ -44,6 +44,8 @@ int main(int argc, char* argv[]) {
     char producerSemaphoreName[50];
     char consumerSemaphoreName[50];
     char metadataSemaphoreName[50];
+    char color[50];
+    strcpy(color, "white");
 
     for (int i = 0; i < argc; i++) {
         if (strcmp(argv[i], "-n") == 0) {
@@ -54,6 +56,9 @@ int main(int argc, char* argv[]) {
             strcat(consumerSemaphoreName, "c");
             strcpy(metadataSemaphoreName, bufferName);
             strcat(metadataSemaphoreName, "m");
+        }
+        if (strcmp(argv[i], "-c") == 0) {
+            strcpy(color, argv[i + 1]);
         }
     }
 
