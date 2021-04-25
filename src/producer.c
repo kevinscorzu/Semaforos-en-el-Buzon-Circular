@@ -166,10 +166,10 @@ int main(int argc, char* argv[]) {
             }
 
             if (manualMode == 0) {
-                writeAutomaticMessage(pointer + (metadataSize * (writeIndex + 1)), writeIndex, producerActives, consumerActives);
+                writeAutomaticMessage(pointer + metadataSize + (MessageSize * (writeIndex + 1)), writeIndex, producerActives, consumerActives);
             }
             if (manualMode == 1) {
-                writeManualMessage(pointer + (metadataSize * (writeIndex + 1)), message, writeIndex, producerActives, consumerActives);
+                writeManualMessage(pointer + metadataSize + (MessageSize * (writeIndex + 1)), message, writeIndex, producerActives, consumerActives);
             }
 
             if (sem_post(semc) < 0) {
@@ -189,7 +189,7 @@ int main(int argc, char* argv[]) {
                 return 1;
             }
 
-            writeStopMessage(pointer + (metadataSize * (writeIndex + 1)), writeIndex, producerActives, consumerActives);
+            writeStopMessage(pointer + metadataSize + (MessageSize * (writeIndex + 1)), writeIndex, producerActives, consumerActives);
 
             if (sem_post(semc) < 0) {
                 printf("[sem_post] Failed\n");
@@ -274,6 +274,11 @@ void writeAutomaticMessage(int* pointer, int index, int producerActives, int con
 void writeManualMessage(int* pointer, char* userInputMessage, int index, int producerActives, int consumerActives) {
     char* message = (char*) (pointer);
     int magicNumber = (rand() % 7);
+
+    if (strcmp(userInputMessage, "Finalizar") == 0) {
+        magicNumber = -2;
+    }
+    
     struct tm* ptm = localtime(&rawtime);
    
     sprintf(message, "Numero Magico: %d, PID: %d, Mensaje: %s, Fecha: %02d/%02d/%d, Hora: %02d:%02d:%02d", magicNumber, pid, userInputMessage, ptm->tm_mday, ptm->tm_mon + 1, ptm->tm_year + 1900, ptm->tm_hour, ptm->tm_min, ptm->tm_sec);

@@ -149,7 +149,7 @@ int main(int argc, char* argv[]) {
             return 1;
         }
 
-        exitCause = readAutomaticMessage(pointer + (metadataSize * (readIndex + 1)), readIndex, producerActives, consumerActives);
+        exitCause = readAutomaticMessage(pointer + metadataSize + (MessageSize * (readIndex + 1)), readIndex, producerActives, consumerActives);
 
         if (exitCause > 0) {
             check = 0;
@@ -171,6 +171,14 @@ int main(int argc, char* argv[]) {
 
     metadata->consumerActives -= 1;
 
+    if (exitCause == 1 && metadata->consumerActives != 0) {
+        metadata->consumerIndex -= 1;
+        metadata->currentMessages += 1;
+        if (sem_post(semc) < 0) {
+            printf("[sem_post] Failed\n");
+            return 1;
+        }
+    }
     if (exitCause == 2) {
         metadata->consumerTotalDeletedByKey += 1;
     }
@@ -190,6 +198,9 @@ int main(int argc, char* argv[]) {
     }
     if (exitCause == 2) {
         printf("Detenido por el Numero Magico\n");
+    }
+    if (exitCause == 3) {
+        printf("Detenido por el Usuario\n");
     }
 
     printf("Tiempo Esperando Total: %d\n", totalWaitingTime);
@@ -240,7 +251,9 @@ int readAutomaticMessage(int* pointer, int index, int producerActives, int consu
 
     int magicNumber = atoi(&message[15]);
 
-    strcpy(message, "");
+    if (magicNumber != -1) {
+        strcpy(message, "");
+    }
 
     if (magicNumber == -1) {
         return 1;
@@ -248,6 +261,10 @@ int readAutomaticMessage(int* pointer, int index, int producerActives, int consu
 
     if (pid % 6 == magicNumber) {
         return 2;
+    }
+
+    if (magicNumber == -2) {
+        return 3;
     }
 
     return 0;
