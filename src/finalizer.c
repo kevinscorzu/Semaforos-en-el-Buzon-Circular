@@ -21,10 +21,10 @@ struct Metadata
     int messageAmount;
     int currentMessages;
 
-    int totalWaitingTime;
-    int totalBlockedTime;
-    int totalUserTime;
-    int totalKernelTime;
+    double totalWaitingTime;
+    double totalBlockedTime;
+    double totalUserTime;
+    double totalKernelTime;
 
     int bufferSlots;
 
@@ -74,7 +74,7 @@ int main(int argc, char *argv[])
         return 1;
     }
 
-    printf("Nombre del buffer: %s\n", bufferName);
+    //printf("Nombre del buffer: %s\n", bufferName);
 
     int fd = shm_open(bufferName, O_RDWR, 0600);
     if (fd < 0)
@@ -235,10 +235,10 @@ void printData(struct Metadata *metadata)
     printf("Total de Productores: %d\n", metadata->producerTotal);
     printf("Total de Consumidores: %d\n", metadata->consumerTotal);
     printf("Total de Consumidores Borrados por Llave: %d\n", metadata->consumerTotalDeletedByKey);
-    printf("Tiempo Esperando Total: %d\n", metadata->totalWaitingTime);
-    printf("Tiempo Bloqueado Total: %d\n", metadata->totalBlockedTime);
-    printf("Tiempo de Usuario Total: %d\n", metadata->totalUserTime);
-    printf("Tiempo de Kernel Total: %d\n", metadata->totalKernelTime);
+    printf("Tiempo Esperando Total: %f s\n", metadata->totalWaitingTime);
+    printf("Tiempo Bloqueado Total: %f s\n", metadata->totalBlockedTime);
+    printf("Tiempo de Usuario Total: %f s\n", metadata->totalUserTime);
+    printf("Tiempo de Kernel Total: %f s\n", metadata->totalKernelTime);
     printf("==================================================\n");
     setColor("");
 

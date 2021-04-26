@@ -1,7 +1,7 @@
 all: initializer finalizer producer consumer clean
 
 initializer: src/initializer.o
-	gcc src/initializer.o -lpthread -lrt -o out/initializer
+	gcc src/initializer.o -lpthread -lrt -lm -o out/initializer
 
 initializer.o: src/initializer.c
 	gcc -c src/initializer.c

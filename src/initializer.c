@@ -5,6 +5,7 @@
 #include <sys/mman.h>
 #include <semaphore.h>
 #include <unistd.h>
+#include "utils.h"
 
 #define MessageSize 256
 
@@ -21,10 +22,10 @@ struct Metadata {
     int messageAmount;
     int currentMessages;
 
-    int totalWaitingTime;
-    int totalBlockedTime;
-    int totalUserTime;
-    int totalKernelTime;
+    double totalWaitingTime;
+    double totalBlockedTime;
+    double totalUserTime;
+    double totalKernelTime;
 
     int bufferSlots;
     
@@ -63,7 +64,7 @@ int main(int argc, char* argv[]) {
         return 1;
     }
 
-    printf("Nombre del buffer: %s, Largo de este: %d\n", bufferName, bufferSlots);
+    //printf("Nombre del buffer: %s, Largo de este: %d\n", bufferName, bufferSlots);
 
     int fd = shm_open(bufferName, O_CREAT | O_EXCL | O_RDWR, 0600);
     if (fd < 0) {
@@ -91,6 +92,7 @@ int main(int argc, char* argv[]) {
         return 1;
     }
 
+    setColor("cyan");
     printf("Buffer y semaforos creados exitosamente\n");
 
     return 0;
@@ -110,10 +112,10 @@ void initializeMetadata(struct Metadata* metadata) {
     metadata->messageAmount = 0;
     metadata->currentMessages = 0;
 
-    metadata->totalWaitingTime = 0;
-    metadata->totalBlockedTime = 0;
-    metadata->totalUserTime = 0;
-    metadata->totalKernelTime = 0;
+    metadata->totalWaitingTime = 0.0;
+    metadata->totalBlockedTime = 0.0;
+    metadata->totalUserTime = 0.0;
+    metadata->totalKernelTime = 0.0;
 
     metadata->stop = 0;
 

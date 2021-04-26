@@ -24,10 +24,10 @@ struct Metadata
     int messageAmount;
     int currentMessages;
 
-    int totalWaitingTime;
-    int totalBlockedTime;
-    int totalUserTime;
-    int totalKernelTime;
+    double totalWaitingTime;
+    double totalBlockedTime;
+    double totalUserTime;
+    double totalKernelTime;
 
     int bufferSlots;
 
@@ -94,7 +94,7 @@ int main(int argc, char *argv[])
         return 1;
     }
 
-    printf("Nombre del buffer: %s\n", bufferName);
+    //printf("Nombre del buffer: %s\n", bufferName);
 
     int fd = shm_open(bufferName, O_RDWR, 0600);
     if (fd < 0)
@@ -124,12 +124,17 @@ int main(int argc, char *argv[])
     strcpy(message, "");
 
     int producedMessages = 0;
-    int totalWaitingTime = 0;
-    int totalBlockedTime = 0;
-    int totalKernelTime = 0;
-    int totalUserTime = 0;
+    double totalWaitingTime = 0;
+    double totalBlockedTime = 0;
+    double totalKernelTime = 0;
+    double totalUserTime = 0;
     int stop;
-    int waitingTime;
+    double waitingTime;
+    struct timespec waitBegin, waitEnd, blockBegin, blockEnd, realBegin, realEnd, kernelBegin, kernelEnd; 
+    long waitSeconds, waitNanoSeconds, blockSeconds, blockNanoSeconds, realSeconds, realNanoSeconds, kernelSeconds, kernelNanoSeconds;
+
+    clock_gettime(CLOCK_REALTIME, &realBegin);
+    clock_gettime(CLOCK_PROCESS_CPUTIME_ID, &kernelBegin);
 
     while (check == 1)
     {
@@ -139,6 +144,8 @@ int main(int argc, char *argv[])
             fgets(message, 100, stdin);
             message[strcspn(message, "\n")] = 0;
         }
+
+        clock_gettime(CLOCK_REALTIME, &blockBegin);
 
         if (sem_wait(semp) < 0)
         {
@@ -152,6 +159,12 @@ int main(int argc, char *argv[])
             return 1;
         }
 
+        clock_gettime(CLOCK_REALTIME, &blockEnd);
+
+        blockSeconds = blockEnd.tv_sec - blockBegin.tv_sec;
+        blockNanoSeconds = blockEnd.tv_nsec - blockBegin.tv_nsec;
+        totalBlockedTime += blockSeconds + blockNanoSeconds*1e-9;
+
         if (firstTime == 1)
         {
             metadata->producerActives += 1;
@@ -164,6 +177,18 @@ int main(int argc, char *argv[])
 
         if (metadata->stop == 1 && metadata->consumerActives == 0)
         {
+            clock_gettime(CLOCK_REALTIME, &realEnd);
+            clock_gettime(CLOCK_PROCESS_CPUTIME_ID, &kernelEnd);
+
+            kernelSeconds = kernelEnd.tv_sec - kernelBegin.tv_sec;
+            kernelNanoSeconds = kernelEnd.tv_nsec - kernelBegin.tv_nsec;
+            totalKernelTime = kernelSeconds + kernelNanoSeconds*1e-9;
+
+            realSeconds = realEnd.tv_sec - realBegin.tv_sec;
+            realNanoSeconds = realEnd.tv_nsec - realBegin.tv_nsec;
+
+            totalUserTime = (realSeconds + realNanoSeconds*1e-9) - totalKernelTime;
+
             metadata->producerActives -= 1;
             metadata->totalUserTime += totalUserTime;
             metadata->totalKernelTime += totalKernelTime;
@@ -206,7 +231,13 @@ int main(int argc, char *argv[])
                 }
 
                 waitingTime = rand_expo(averageTime);
+                clock_gettime(CLOCK_REALTIME, &waitBegin);
                 sleep(waitingTime);
+                clock_gettime(CLOCK_REALTIME, &waitEnd);
+
+                waitSeconds = waitEnd.tv_sec - waitBegin.tv_sec;
+                waitNanoSeconds = waitEnd.tv_nsec - waitBegin.tv_nsec;
+                totalWaitingTime += waitSeconds + waitNanoSeconds*1e-9;
             }
             else if (manualMode == 0)
             {
@@ -218,7 +249,13 @@ int main(int argc, char *argv[])
                 }
 
                 waitingTime = rand_expo(averageTime);
+                clock_gettime(CLOCK_REALTIME, &waitBegin);
                 sleep(waitingTime);
+                clock_gettime(CLOCK_REALTIME, &waitEnd);
+
+                waitSeconds = waitEnd.tv_sec - waitBegin.tv_sec;
+                waitNanoSeconds = waitEnd.tv_nsec - waitBegin.tv_nsec;
+                totalWaitingTime += waitSeconds + waitNanoSeconds*1e-9;
             }
             else
             {
@@ -230,7 +267,13 @@ int main(int argc, char *argv[])
                 }
 
                 waitingTime = rand_expo(averageTime);
+                clock_gettime(CLOCK_REALTIME, &waitBegin);
                 sleep(waitingTime);
+                clock_gettime(CLOCK_REALTIME, &waitEnd);
+
+                waitSeconds = waitEnd.tv_sec - waitBegin.tv_sec;
+                waitNanoSeconds = waitEnd.tv_nsec - waitBegin.tv_nsec;
+                totalWaitingTime += waitSeconds + waitNanoSeconds*1e-9;
             }
         }
         else
@@ -240,9 +283,6 @@ int main(int argc, char *argv[])
                 printf("[sem_post] Failed\n");
                 return 1;
             }
-
-            waitingTime = rand_expo(averageTime);
-            sleep(waitingTime);
         }
     }
 
@@ -253,10 +293,10 @@ int main(int argc, char *argv[])
     setColor("red");
     printf("Numero de Mensajes Producidos: %d\n", producedMessages);
     printf("Detenido por el Finalizador/Usuario\n");
-    printf("Tiempo Esperando Total: %d\n", totalWaitingTime);
-    printf("Tiempo Bloqueado Total: %d\n", totalBlockedTime);
-    printf("Tiempo de Usuario Total: %d\n", totalUserTime);
-    printf("Tiempo de Kernel Total: %d\n", totalKernelTime);
+    printf("Tiempo Esperando Total: %f s\n", totalWaitingTime);
+    printf("Tiempo Bloqueado Total: %f s\n", totalBlockedTime);
+    printf("Tiempo de Usuario Total: %f s\n", totalUserTime);
+    printf("Tiempo de Kernel Total: %f s\n", totalKernelTime);
     setColor("red");
     printf("==================================================\n\n");
     setColor("");
