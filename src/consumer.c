@@ -7,8 +7,10 @@
 #include <unistd.h>
 #include "utils.h"
 
+// Tamaño de cada mensaje
 #define MessageSize 256
 
+// Struct con la metadata del programa
 struct Metadata
 {
     int producerActives;
@@ -41,6 +43,9 @@ int pid;
 int initializeSemaphores(char *producerSemaphoreName, char *consumerSemaphoreName, char *metadataSemaphoreName);
 int readAutomaticMessage(int *pointer, int index, int producerActives, int consumerActives, char *color);
 
+// Funcion principal del consumidor
+// Recibe de argumento el nombre del buffer, el tiempo medio de espera, el activador del modo manual y el color de los mensajes
+// Se encarga de leer mensajes del buffer creado por el inicializador
 int main(int argc, char *argv[])
 {
 
@@ -273,6 +278,8 @@ int main(int argc, char *argv[])
     return 0;
 }
 
+// Funcion encargada de inicializar los semaforos creados por el inicializador
+// Recibe el nombre de los semaforos
 int initializeSemaphores(char *producerSemaphoreName, char *consumerSemaphoreName, char *metadataSemaphoreName)
 {
 
@@ -303,6 +310,8 @@ int initializeSemaphores(char *producerSemaphoreName, char *consumerSemaphoreNam
     return 0;
 }
 
+// Funcion encargada de leer mensajes de manera automatica
+// Recibe el puntero con la direccion donde se leera el mensaje, el indice donde se leyo, la cantidad de productores activos, la cantidad de consumidores activos y el color a escribir los mensajes
 int readAutomaticMessage(int *pointer, int index, int producerActives, int consumerActives, char *color)
 {
 

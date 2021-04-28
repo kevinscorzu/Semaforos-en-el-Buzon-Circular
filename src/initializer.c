@@ -7,8 +7,10 @@
 #include <unistd.h>
 #include "utils.h"
 
+// Tamaño de cada mensaje
 #define MessageSize 256
 
+// Struct con la metadata del programa
 struct Metadata {
     int producerActives;
     int producerTotal;
@@ -35,6 +37,9 @@ struct Metadata {
 void initializeMetadata(struct Metadata* metadata);
 int createSemaphores(char* producerSemaphoreName, char* consumerSemaphoreName, char* metadataSemaphoreName, int bufferSlots);
 
+// Funcion principal del inicializador
+// Recibe de argumento el nombre del buffer
+// Se encarga de crear el espacio de memoria compartida y los semaforos
 int main(int argc, char* argv[]) {
 
     char bufferName[50];
@@ -98,6 +103,8 @@ int main(int argc, char* argv[]) {
     return 0;
 }
 
+// Funcion que inicializa el struct de la metadata del buffer
+// Recibe un puntero con la metadata
 void initializeMetadata(struct Metadata* metadata) {
 
     metadata->producerActives = 0;
@@ -122,6 +129,8 @@ void initializeMetadata(struct Metadata* metadata) {
     return;
 }
 
+// Funcion que crea los semaforos para ser utilizados por los demas procesos
+// Recibe el nombre de los semaforos y la cantidad de espacios que contiene el buffer
 int createSemaphores(char* producerSemaphoreName, char* consumerSemaphoreName, char* metadataSemaphoreName, int bufferSlots) {
 
     sem_t* semp = sem_open(producerSemaphoreName, O_CREAT, 0644, bufferSlots);

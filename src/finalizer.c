@@ -7,6 +7,7 @@
 #include <unistd.h>
 #include "utils.h"
 
+// Struct con la metadata del programa
 struct Metadata
 {
     int producerActives;
@@ -39,6 +40,9 @@ int initializeSemaphores(char *producerSemaphoreName, char *consumerSemaphoreNam
 int closeSemaphores(char *producerSemaphoreName, char *consumerSemaphoreName, char *metadataSemaphoreName);
 void printData(struct Metadata *metadata);
 
+// Funcion principal del finalizador
+// Recibe de argumento el nombre del buffer y el color a escribir los mensajes
+// Se encarga de eliminar los productores, mostrar datos relevantes y cerrar semaforos y espacio de memoria compartida
 int main(int argc, char *argv[])
 {
 
@@ -153,6 +157,8 @@ int main(int argc, char *argv[])
     return 0;
 }
 
+// Funcion encargada de inicializar los semaforos creados por el inicializador
+// Recibe el nombre de los semaforos
 int initializeSemaphores(char *producerSemaphoreName, char *consumerSemaphoreName, char *metadataSemaphoreName)
 {
 
@@ -183,6 +189,8 @@ int initializeSemaphores(char *producerSemaphoreName, char *consumerSemaphoreNam
     return 0;
 }
 
+// Funcion encargada de cerrar los semaforos creados por el inicializador
+// Recibe el nombre de los semaforos
 int closeSemaphores(char *producerSemaphoreName, char *consumerSemaphoreName, char *metadataSemaphoreName)
 {
 
@@ -225,6 +233,8 @@ int closeSemaphores(char *producerSemaphoreName, char *consumerSemaphoreName, ch
     return 0;
 }
 
+// Funcion encargada de imprimir los datos de ejecucion
+// Recibe un puntero de la metadata
 void printData(struct Metadata *metadata)
 {
 

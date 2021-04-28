@@ -15,6 +15,8 @@
 #define White "\033[0;37m"
 #define Reset "\033[0m"
 
+// Funcion encargada de aplicar la distribucion exponencial
+// Recibe el lambda
 double rand_expo(double lambda)
 {
     double u;
@@ -22,6 +24,8 @@ double rand_expo(double lambda)
     return -log(1 - u) / (1 / lambda);
 }
 
+// Funcion encargada de aplicar la distribucion de Poisson
+// Recibe el lambda
 double rand_poisson(double lambda)
 {
     double u;
@@ -38,6 +42,8 @@ double rand_poisson(double lambda)
     return k - 1 + 1;
 }
 
+// Funcion encargada de colocar el color de los prints
+// Recibe el color para imprimir
 void setColor(char *color)
 {
     if (strcmp(color, "red") == 0)
